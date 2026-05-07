@@ -24,11 +24,22 @@ The architecture is intentionally simple:
 3. **local CLI** — the primary agent-facing interface
 4. **repo-local instructions + skill** — reusable guidance across agent runtimes
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/buddhism5080/thunderbird-agent/main/docs/demo.gif" alt="Thunderbird Agent demo" width="720">
-</p>
+---
 
-> Inspired by [bb1/thunderbird-mcp](https://github.com/bb1/thunderbird-mcp), but intentionally rebuilt as a protocol-light, CLI-first agent package.
+## Project origin
+
+This repository was **directly refactored from** [`TKasperczyk/thunderbird-mcp`](https://github.com/TKasperczyk/thunderbird-mcp), which was the concrete starting point for this work.
+
+That upstream README also credited [`bb1/thunderbird-mcp`](https://github.com/bb1/thunderbird-mcp) as an earlier inspiration, but this project's **direct source repository** for the current rewrite was `TKasperczyk/thunderbird-mcp`.
+
+Thunderbird Agent is now a downstream rewrite with a narrower, different scope:
+
+- renamed to `thunderbird-agent`
+- CLI-first instead of MCP-first
+- no MCP compatibility layer
+- vendor-neutral instructions and skill surfaces for multiple AI agents
+
+No upstream demo media is embedded in this README; any future demo assets should be recorded specifically for this repository.
 
 ---
 
@@ -229,7 +240,7 @@ What they do:
 - `build` — run the full local release pipeline
 - `pack:check` — preview npm package contents and size
 
-The npm package intentionally ships the CLI, extension source, exported tool catalog, skill/docs surfaces, and the built XPI artifact — but excludes large repo-only assets like the local demo GIF from the tarball.
+The npm package intentionally ships the CLI, extension source, exported tool catalog, skill/docs surfaces, and the built XPI artifact — but excludes repo-only materials that are not required for installation or agent use.
 
 ---
 

@@ -19,11 +19,22 @@ Thunderbird Agent 把本地 Thunderbird 配置文件暴露成一个**面向 AI a
 3. **本地 CLI**：agent 主要调用入口
 4. **仓库内说明与 skill**：供不同 agent runtime 复用
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/buddhism5080/thunderbird-agent/main/docs/demo.gif" alt="Thunderbird Agent demo" width="720">
-</p>
+---
 
-> 项目灵感来自 [bb1/thunderbird-mcp](https://github.com/bb1/thunderbird-mcp)，但这里已经明确重构为 **CLI-first、轻协议、非 MCP 依赖** 的 agent 工作流。
+## 项目来源
+
+这个仓库是**直接从** [`TKasperczyk/thunderbird-mcp`](https://github.com/TKasperczyk/thunderbird-mcp) **重构出来的**，那才是这次改造工作的实际起点。
+
+该上游 README 里也提到它早先受过 [`bb1/thunderbird-mcp`](https://github.com/bb1/thunderbird-mcp) 启发，但就这次重构而言，当前项目的**直接来源仓库**是 `TKasperczyk/thunderbird-mcp`。
+
+现在的 Thunderbird Agent 已经是一个范围更明确的下游重写版本，和原项目相比主要变化是：
+
+- 项目名改为 `thunderbird-agent`
+- 入口改为 CLI-first，而不是 MCP-first
+- 不再保留 MCP 兼容层
+- 增加面向多种 AI agent 的通用 instruction / skill surfaces
+
+本 README 不再嵌入上游的演示动图；后续如果需要演示素材，应单独为当前仓库重新录制。
 
 ---
 
