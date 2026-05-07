@@ -1,5 +1,7 @@
 # Thunderbird Agent
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 [![Tools](https://img.shields.io/badge/36_Tools-email%2C_compose%2C_filters%2C_calendar%2C_contacts-blue.svg)](#tool-surface)
 [![Privacy](https://img.shields.io/badge/Privacy-localhost_only-green.svg)](#security-model)
 [![Thunderbird](https://img.shields.io/badge/Thunderbird-102%2B-0a84ff.svg)](https://www.thunderbird.net/)
@@ -276,6 +278,7 @@ If you are using an AI agent to send or modify mail, keep `skipReview: false` un
 
 ## Documentation map
 
+- `README.zh-CN.md` — Simplified Chinese overview and quick start
 - `docs/README.md` — documentation overview
 - `docs/agents/README.md` — agent integration overview
 - `docs/agents/claude-code.md` — Claude Code workflow notes
@@ -304,6 +307,7 @@ thunderbird-agent/
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── README.md
+├── README.zh-CN.md
 ├── dist/
 │   └── thunderbird-agent.xpi
 ├── docs/
