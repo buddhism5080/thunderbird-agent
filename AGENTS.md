@@ -1,72 +1,95 @@
 # Thunderbird Agent Guide
 
-Use this repo when an AI agent needs **safe, scriptable access to Thunderbird** through the local CLI.
+Use this repository when an AI agent needs **safe, scriptable access to Thunderbird through the local CLI**.
 
-## Preferred operating mode
+## Project stance
 
-Prefer the CLI over direct HTTP whenever possible.
+This repo is intentionally:
 
-Why:
-- it already handles connection-file discovery
-- it reuses the same auth + retry logic as the extension transport
-- it is easy to script from terminal-capable agents
-- it works across Claude Code, Codex, OpenClaw, Hermes, and other repo-aware agent runtimes
+- **CLI-first**
+- **localhost-only**
+- **review-first for send flows**
+- **vendor-neutral across agent runtimes**
 
-## Important commands
+Do **not** reintroduce protocol adapters or framework-specific packaging unless the user explicitly asks for them.
+
+## Default workflow in this repo
+
+1. keep Thunderbird running locally
+2. use the CLI instead of bypassing it with custom HTTP calls
+3. prefer read-only inspection before mutating mailbox state
+4. keep `skipReview: false` unless the user explicitly approved direct send
+5. after changing tool metadata, rebuild the exported catalog
+
+## Canonical commands
 
 ```bash
-# Health / discovery
+# Quality gates
+npm test
+npm run build
+npm run pack:check
+
+# CLI
 node packages/cli/thunderbird-agent.cjs doctor
-
-# Inspect live tools from a running Thunderbird session
 node packages/cli/thunderbird-agent.cjs tools list
-
-# Inspect the offline shared catalog without Thunderbird running
 node packages/cli/thunderbird-agent.cjs tools list --catalog
-
-# Call a tool directly
 node packages/cli/thunderbird-agent.cjs tools call searchMessages --args '{"query":"invoice","maxResults":10}'
 ```
 
-If the CLI was installed globally, the same commands become:
+## When editing this repo
+
+### If you change tool definitions
+
+Files usually involved:
+
+- `extension/agent_server/api.js`
+- `shared/tool-catalog.json`
+- `test/tool-catalog.test.cjs`
+- `README.md` / `skills/thunderbird-agent/SKILL.md` if user-facing behavior changed
+
+Run:
 
 ```bash
-thunderbird-agent doctor
-thunderbird-agent tools list
+npm run build:catalog
+npm test
 ```
 
-## Safety rules
+### If you change build or packaging
 
-- Default to review-first mail flows.
-- Do **not** set `skipReview: true` unless the user explicitly wants direct sending.
-- For message actions, preserve both `messageId` and `folderPath` from search results.
-- After IMAP folder mutations, verify with `listFolders` because changes can be asynchronous.
+Files usually involved:
 
-## Recommended workflows
+- `package.json`
+- `scripts/build-xpi.cjs`
+- `scripts/build.sh`
+- `scripts/install.sh`
+- `extension/manifest.json`
 
-### Read mail
-1. `searchMessages`
-2. `getMessage`
-3. summarize / propose next action
+Run:
 
-### Reply / forward
-1. locate target message with `searchMessages` or `getRecentMessages`
-2. call `replyToMessage` or `forwardMessage`
-3. keep `skipReview` false by default
+```bash
+npm run check:versions
+npm run build
+npm run pack:check
+```
 
-### Bulk organization
-1. estimate with `searchMessages` + `countOnly`
-2. fetch exact items if needed
-3. apply `updateMessage`, `createFilter`, `updateFilter`, `applyFilters`, or folder tools
+### If you change docs or skill surfaces
 
-## Instruction / skill surfaces in this repo
+Keep these aligned when behavior changes:
 
-- `AGENTS.md` — broad agent-facing project instructions
-- `CLAUDE.md` — Claude Code specific companion instructions
-- `skills/thunderbird-agent/SKILL.md` — vendor-neutral Thunderbird workflow skill
-- `docs/agents/` — CLI-first notes for Claude Code, Codex, and OpenClaw
+- `README.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+- `docs/agents/*.md`
+- `skills/thunderbird-agent/SKILL.md`
+
+## Safety rules for mailbox mutations
+
+- preserve both `messageId` and `folderPath` across follow-up calls
+- validate search results before bulk mutation
+- verify IMAP state after folder/message changes when results matter
+- do not widen account access or tool access in code unless the user explicitly asked
 
 ## Environment overrides
 
-- `THUNDERBIRD_AGENT_CONNECTION_FILE` — force an explicit connection file path
-- `THUNDERBIRD_AGENT_CLI` — force an explicit CLI path for wrapper scripts or external agent workspaces
+- `THUNDERBIRD_AGENT_CONNECTION_FILE`
+- `THUNDERBIRD_AGENT_CLI`

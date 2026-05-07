@@ -1,20 +1,23 @@
 # Codex
 
+Codex is a good fit when you want deterministic shell-based workflows against Thunderbird Agent.
+
 ## Recommended setup
 
-1. give Codex this repo as working context so it can read `AGENTS.md`
-2. allow shell access to the Thunderbird Agent CLI
-3. keep Thunderbird running locally while Codex calls tools
+1. give Codex this repository as context so it can read `AGENTS.md`
+2. allow shell access to the local CLI
+3. keep Thunderbird open while Codex calls live tools
 
 ## First commands
 
 ```bash
 node packages/cli/thunderbird-agent.cjs doctor
 node packages/cli/thunderbird-agent.cjs tools list --catalog
+node packages/cli/thunderbird-agent.cjs tools call searchMessages --args '{"query":"from:alice subject:report","maxResults":5}'
 ```
 
 ## Notes
 
-- use `tools list --catalog` when Thunderbird is not running yet
-- use `tools call ... --args ...` for deterministic, auditable calls
-- preserve `messageId` + `folderPath` pairs across follow-up actions
+- use `tools list --catalog` before Thunderbird is running
+- use `tools call ... --args ...` when you want auditable single-step calls
+- keep `messageId` + `folderPath` pairs intact between search and mutation steps

@@ -1,9 +1,9 @@
 # Skills
 
-This repository uses a **vendor-neutral skill directory** so the Thunderbird workflow guidance is reusable across multiple AI agent runtimes.
+This repository ships a **vendor-neutral skill directory** so Thunderbird workflows can be reused across multiple AI agent runtimes.
 
-Current skill:
+## Included skill
 
 - `thunderbird-agent/SKILL.md`
 
-The format is plain Markdown with YAML frontmatter in an agentskills-style layout, so it can be adapted by Hermes, OpenClaw, Claude Code companion tooling, Codex workflows, or any custom agent that can read repo-local skill files.
+The skill is plain Markdown with YAML frontmatter and is designed to be readable by humans first, then adaptable by Hermes, Claude Code companion tooling, Codex workflows, OpenClaw, or custom repo-local agent loaders.

@@ -1,6 +1,10 @@
-# Build output (keep dist/thunderbird-mcp.xpi for easy install)
+# Build metadata
 dist/*.log
 extension/buildinfo.json
+
+# Local machine config
+.agent.json
+*.local.json
 
 # OS files
 .DS_Store
@@ -13,9 +17,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.sublime-*
-
-# MCP config (contains local paths)
-.mcp.json
 
 # Node.js
 node_modules/

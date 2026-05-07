@@ -1,25 +1,30 @@
 # Claude Code notes for Thunderbird Agent
 
-Use the local CLI first:
+Read `AGENTS.md` first, then use the local CLI.
+
+## First commands
 
 ```bash
 node packages/cli/thunderbird-agent.cjs doctor
 node packages/cli/thunderbird-agent.cjs tools list
-node packages/cli/thunderbird-agent.cjs tools call searchMessages --args '{"query":"invoice","maxResults":10}'
 ```
 
-For broad project conventions and safety rules, also read `AGENTS.md`.
+## If you modify the repo
+
+```bash
+npm test
+npm run build
+npm run pack:check
+```
 
 ## Mail safety
 
-- keep `skipReview` false unless the user explicitly approved direct send
-- for message operations, preserve both `messageId` and `folderPath`
-- after IMAP folder changes, verify with `listFolders`
+- keep `skipReview` false unless the user explicitly approved direct sending
+- preserve `messageId` + `folderPath` pairs between read and write steps
+- verify folder state after IMAP mutations when correctness matters
 
-## Skill
+## Skill surface
 
-This repo ships a vendor-neutral skill at:
+Reusable Thunderbird workflow guidance lives at:
 
-`skills/thunderbird-agent/SKILL.md`
-
-Load or reference that skill when you want reusable Thunderbird workflows rather than only one-off commands.
+- `skills/thunderbird-agent/SKILL.md`

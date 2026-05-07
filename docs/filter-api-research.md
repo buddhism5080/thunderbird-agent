@@ -1,4 +1,8 @@
-# Thunderbird Mail Filters — API Research & Implementation Guide
+# Thunderbird Mail Filters — Archived Research Notes
+
+> Status: archived maintainer notes, not the primary user-facing documentation.
+>
+> Use `README.md`, `docs/README.md`, and `docs/agents/README.md` for the current project narrative. This file preserves the original deep-dive analysis behind filter support.
 
 Research completed 2026-02-21. Everything needed to implement filter control via local agent tools.
 

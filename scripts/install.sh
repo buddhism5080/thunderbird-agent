@@ -1,18 +1,14 @@
 #!/bin/bash
-# Install the Thunderbird Agent extension
+# Install the Thunderbird Agent extension into the current user's Thunderbird profile.
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 DIST_DIR="$PROJECT_DIR/dist"
 XPI_FILE="$DIST_DIR/thunderbird-agent.xpi"
 
-# Find Thunderbird profile directory
 find_profile() {
-    # Native profile is preferred when multiple install types coexist --
-    # vestigial Flatpak profile dirs from prior experiments must not
-    # hijack a native install that is actually in use.
     local profile_roots=(
         "$HOME/.thunderbird"
         "$HOME/.var/app/org.mozilla.Thunderbird/.thunderbird"
@@ -34,13 +30,66 @@ find_profile() {
         exit 1
     fi
 
-    # Look for default-release profile first, then any .default profile
-    profile=$(ls -d "$profiles_dir"/*.default-release 2>/dev/null | head -1)
+    if [[ -f "$profiles_dir/profiles.ini" ]] && command -v python3 >/dev/null 2>&1; then
+        profile=$(python3 - "$profiles_dir" <<'PY'
+import configparser
+import os
+import sys
+
+root = sys.argv[1]
+ini_path = os.path.join(root, 'profiles.ini')
+config = configparser.RawConfigParser()
+config.read(ini_path)
+
+def resolve_path(path_value, is_relative=True):
+    path_value = (path_value or '').strip()
+    if not path_value:
+        return ''
+    return os.path.join(root, path_value) if is_relative else path_value
+
+# Thunderbird commonly stores the active install mapping under [Install*].
+for section in config.sections():
+    if not section.startswith('Install'):
+        continue
+    install_default = resolve_path(config.get(section, 'Default', fallback=''), True)
+    if install_default:
+        print(install_default)
+        raise SystemExit(0)
+
+chosen = None
+for section in config.sections():
+    if not section.startswith('Profile'):
+        continue
+    if config.get(section, 'Default', fallback='0') == '1':
+        chosen = section
+        break
+
+if chosen is None:
+    for section in config.sections():
+        if section.startswith('Profile'):
+            chosen = section
+            break
+
+if chosen is None:
+    raise SystemExit(0)
+
+path_value = config.get(chosen, 'Path', fallback='').strip()
+is_relative = config.get(chosen, 'IsRelative', fallback='1').strip() == '1'
+resolved = resolve_path(path_value, is_relative)
+if resolved:
+    print(resolved)
+PY
+)
+    fi
+
+    if [[ -z "$profile" ]]; then
+        profile=$(ls -d "$profiles_dir"/*.default-release 2>/dev/null | head -1)
+    fi
     if [[ -z "$profile" ]]; then
         profile=$(ls -d "$profiles_dir"/*.default 2>/dev/null | head -1)
     fi
 
-    if [[ -z "$profile" ]]; then
+    if [[ -z "$profile" || ! -d "$profile" ]]; then
         echo "Error: No Thunderbird profile found in $profiles_dir" >&2
         exit 1
     fi
@@ -48,25 +97,22 @@ find_profile() {
     echo "$profile"
 }
 
-# Build if needed
 if [[ ! -f "$XPI_FILE" ]]; then
-    echo "Building extension first..."
-    "$SCRIPT_DIR/build.sh"
+    echo "Build artifact missing; running npm run build..."
+    (cd "$PROJECT_DIR" && npm run build --silent)
 fi
 
 PROFILE_DIR=$(find_profile)
 EXTENSIONS_DIR="$PROFILE_DIR/extensions"
 
 echo "Installing to profile: $PROFILE_DIR"
-
-# Create extensions directory if needed
 mkdir -p "$EXTENSIONS_DIR"
-
-# Copy extension
 cp "$XPI_FILE" "$EXTENSIONS_DIR/thunderbird-agent@tkasperczyk.dev.xpi"
 
-echo "Installed! Restart Thunderbird to activate."
-echo ""
-echo "Next steps:"
-echo "  CLI doctor:   node $PROJECT_DIR/packages/cli/thunderbird-agent.cjs doctor"
-echo "  Agent docs:   read $PROJECT_DIR/AGENTS.md, $PROJECT_DIR/CLAUDE.md, and $PROJECT_DIR/docs/agents/README.md"
+echo "Installed Thunderbird Agent. Restart Thunderbird to activate."
+echo
+echo "Useful next steps:"
+echo "  Build artifact: $XPI_FILE"
+echo "  CLI doctor:     node $PROJECT_DIR/packages/cli/thunderbird-agent.cjs doctor"
+echo "  Main docs:      $PROJECT_DIR/README.md"
+echo "  Agent docs:     $PROJECT_DIR/docs/agents/README.md"

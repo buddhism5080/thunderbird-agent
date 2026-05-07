@@ -1,33 +1,38 @@
-# Agent integration notes
+# Agent integration guide
 
-This directory contains **CLI-first** notes for using Thunderbird Agent from different AI coding assistants and agent runtimes.
+Thunderbird Agent is designed for **repo-aware, shell-capable agents**.
 
-Files:
+The expected integration pattern is:
 
-- `claude-code.md` — Claude Code usage notes
-- `codex.md` — Codex usage notes
-- `openclaw.md` — OpenClaw usage notes
+1. give the agent this repository as context
+2. let it read `AGENTS.md` (and `CLAUDE.md` for Claude Code)
+3. let it run the local CLI
+4. keep Thunderbird running on the same machine
 
-## Default recommendation
-
-Give the agent this repo as working context and let it use:
+## Common first-run checklist
 
 ```bash
+npm run build
 node packages/cli/thunderbird-agent.cjs doctor
 node packages/cli/thunderbird-agent.cjs tools list
-node packages/cli/thunderbird-agent.cjs tools call searchMessages --args '{"query":"invoice","maxResults":10}'
 ```
 
-If the CLI is installed globally, allow:
+If the CLI is installed globally:
 
 ```bash
 thunderbird-agent doctor
 thunderbird-agent tools list
 ```
 
-## Why CLI-first?
+## Why the CLI is the primary surface
 
-- avoids agent-runtime-specific protocol glue
-- easier to audit and debug
-- works for agents that can run shell commands but do not share a common tool protocol
-- matches the repo-local instruction files (`AGENTS.md`, `CLAUDE.md`) and reusable skill (`skills/thunderbird-agent/SKILL.md`)
+- fewer moving parts than protocol adapters
+- easier to inspect and debug in logs
+- works across Claude Code, Codex, OpenClaw, Hermes, and custom agent runners
+- keeps one shared execution path for tests, docs, and real agent usage
+
+## Files in this directory
+
+- `claude-code.md` — Claude Code workflow notes
+- `codex.md` — Codex workflow notes
+- `openclaw.md` — OpenClaw workflow notes

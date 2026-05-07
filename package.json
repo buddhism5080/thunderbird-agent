@@ -1,6 +1,6 @@
 {
   "name": "thunderbird-agent",
-  "version": "0.2.0",
+  "version": "0.6.0",
   "description": "Thunderbird extension, CLI, and vendor-neutral skill pack for AI agents to automate mail, contacts, filters, and calendars",
   "author": "Tomasz Kasperczyk",
   "license": "MIT",
@@ -30,7 +30,8 @@
     "packages/",
     "shared/",
     "skills/",
-    "docs/",
+    "docs/agents/",
+    "dist/thunderbird-agent.xpi",
     "extension/",
     "scripts/",
     "AGENTS.md",
@@ -40,8 +41,14 @@
   ],
   "scripts": {
     "test": "node --test",
-    "catalog:export": "node ./scripts/export-tool-catalog.cjs",
-    "doctor": "node ./packages/cli/thunderbird-agent.cjs doctor"
+    "build:catalog": "node ./scripts/export-tool-catalog.cjs",
+    "catalog:export": "npm run build:catalog",
+    "check:versions": "node ./scripts/check-versions.cjs",
+    "build:xpi": "node ./scripts/build-xpi.cjs",
+    "build": "npm run check:versions && npm run build:catalog && npm run build:xpi",
+    "doctor": "node ./packages/cli/thunderbird-agent.cjs doctor",
+    "pack:check": "npm pack --dry-run --json",
+    "prepack": "npm run build"
   },
   "engines": {
     "node": ">=18.0.0"

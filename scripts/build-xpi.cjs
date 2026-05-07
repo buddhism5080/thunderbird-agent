@@ -1,21 +1,32 @@
 #!/usr/bin/env node
 /**
- * Build the Thunderbird Agent extension XPI (cross-platform, no external deps).
+ * Build the Thunderbird Agent extension XPI without mutating the source tree.
  */
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const { execSync } = require('child_process');
 
 const PROJECT_DIR = path.resolve(__dirname, '..');
 const EXT_DIR = path.join(PROJECT_DIR, 'extension');
 const DIST_DIR = path.join(PROJECT_DIR, 'dist');
 const OUT_FILE = path.join(DIST_DIR, 'thunderbird-agent.xpi');
+const LEGACY_OUT_FILE = path.join(DIST_DIR, 'thunderbird-mcp.xpi');
+
+const packageJson = JSON.parse(fs.readFileSync(path.join(PROJECT_DIR, 'package.json'), 'utf8'));
+const manifestJson = JSON.parse(fs.readFileSync(path.join(EXT_DIR, 'manifest.json'), 'utf8'));
+
+if (packageJson.version !== manifestJson.version) {
+  throw new Error(
+    `Version mismatch: package.json=${packageJson.version} extension/manifest.json=${manifestJson.version}`
+  );
+}
 
 function crc32(buf) {
   let crc = 0xFFFFFFFF;
-  for (let i = 0; i < buf.length; i++) {
+  for (let i = 0; i < buf.length; i += 1) {
     crc ^= buf[i];
-    for (let j = 0; j < 8; j++) {
+    for (let j = 0; j < 8; j += 1) {
       crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
     }
   }
@@ -23,59 +34,69 @@ function crc32(buf) {
 }
 
 class ZipWriter {
-  constructor() { this.files = []; this.offset = 0; this.buf = []; }
+  constructor() {
+    this.files = [];
+    this.offset = 0;
+    this.buffers = [];
+  }
 
   addFile(name, data) {
-    // Always use forward slashes in zip entries
-    name = name.split(path.sep).join('/');
-    const nameBuf = Buffer.from(name, 'utf8');
-    const crc = crc32(data);
+    const normalizedName = name.split(path.sep).join('/');
+    const nameBuf = Buffer.from(normalizedName, 'utf8');
     const compressed = zlib.deflateRawSync(data);
+    const crc = crc32(data);
 
-    const lh = Buffer.alloc(30 + nameBuf.length);
-    lh.writeUInt32LE(0x04034b50, 0);
-    lh.writeUInt16LE(20, 4);
-    lh.writeUInt16LE(0, 6);
-    lh.writeUInt16LE(8, 8);
-    lh.writeUInt16LE(0, 10);
-    lh.writeUInt16LE(0, 12);
-    lh.writeUInt32LE(crc, 14);
-    lh.writeUInt32LE(compressed.length, 18);
-    lh.writeUInt32LE(data.length, 22);
-    lh.writeUInt16LE(nameBuf.length, 26);
-    lh.writeUInt16LE(0, 28);
-    nameBuf.copy(lh, 30);
+    const localHeader = Buffer.alloc(30 + nameBuf.length);
+    localHeader.writeUInt32LE(0x04034b50, 0);
+    localHeader.writeUInt16LE(20, 4);
+    localHeader.writeUInt16LE(0, 6);
+    localHeader.writeUInt16LE(8, 8);
+    localHeader.writeUInt16LE(0, 10);
+    localHeader.writeUInt16LE(0, 12);
+    localHeader.writeUInt32LE(crc, 14);
+    localHeader.writeUInt32LE(compressed.length, 18);
+    localHeader.writeUInt32LE(data.length, 22);
+    localHeader.writeUInt16LE(nameBuf.length, 26);
+    localHeader.writeUInt16LE(0, 28);
+    nameBuf.copy(localHeader, 30);
 
-    this.files.push({ name: nameBuf, crc, compressedSize: compressed.length, uncompressedSize: data.length, offset: this.offset });
-    this.buf.push(lh, compressed);
-    this.offset += lh.length + compressed.length;
+    this.files.push({
+      name: nameBuf,
+      crc,
+      compressedSize: compressed.length,
+      uncompressedSize: data.length,
+      offset: this.offset,
+    });
+    this.buffers.push(localHeader, compressed);
+    this.offset += localHeader.length + compressed.length;
   }
 
   toBuffer() {
-    const cd = [];
-    let cdSize = 0;
-    for (const f of this.files) {
-      const e = Buffer.alloc(46 + f.name.length);
-      e.writeUInt32LE(0x02014b50, 0);
-      e.writeUInt16LE(20, 4);
-      e.writeUInt16LE(20, 6);
-      e.writeUInt16LE(0, 8);
-      e.writeUInt16LE(8, 10);
-      e.writeUInt16LE(0, 12);
-      e.writeUInt16LE(0, 14);
-      e.writeUInt32LE(f.crc, 16);
-      e.writeUInt32LE(f.compressedSize, 20);
-      e.writeUInt32LE(f.uncompressedSize, 24);
-      e.writeUInt16LE(f.name.length, 28);
-      e.writeUInt16LE(0, 30);
-      e.writeUInt16LE(0, 32);
-      e.writeUInt16LE(0, 34);
-      e.writeUInt16LE(0, 36);
-      e.writeUInt32LE(0, 38);
-      e.writeUInt32LE(f.offset, 42);
-      f.name.copy(e, 46);
-      cd.push(e);
-      cdSize += e.length;
+    const centralDirectory = [];
+    let centralDirectorySize = 0;
+
+    for (const file of this.files) {
+      const entry = Buffer.alloc(46 + file.name.length);
+      entry.writeUInt32LE(0x02014b50, 0);
+      entry.writeUInt16LE(20, 4);
+      entry.writeUInt16LE(20, 6);
+      entry.writeUInt16LE(0, 8);
+      entry.writeUInt16LE(8, 10);
+      entry.writeUInt16LE(0, 12);
+      entry.writeUInt16LE(0, 14);
+      entry.writeUInt32LE(file.crc, 16);
+      entry.writeUInt32LE(file.compressedSize, 20);
+      entry.writeUInt32LE(file.uncompressedSize, 24);
+      entry.writeUInt16LE(file.name.length, 28);
+      entry.writeUInt16LE(0, 30);
+      entry.writeUInt16LE(0, 32);
+      entry.writeUInt16LE(0, 34);
+      entry.writeUInt16LE(0, 36);
+      entry.writeUInt32LE(0, 38);
+      entry.writeUInt32LE(file.offset, 42);
+      file.name.copy(entry, 46);
+      centralDirectory.push(entry);
+      centralDirectorySize += entry.length;
     }
 
     const eocd = Buffer.alloc(22);
@@ -84,61 +105,94 @@ class ZipWriter {
     eocd.writeUInt16LE(0, 6);
     eocd.writeUInt16LE(this.files.length, 8);
     eocd.writeUInt16LE(this.files.length, 10);
-    eocd.writeUInt32LE(cdSize, 12);
+    eocd.writeUInt32LE(centralDirectorySize, 12);
     eocd.writeUInt32LE(this.offset, 16);
     eocd.writeUInt16LE(0, 20);
 
-    return Buffer.concat([...this.buf, ...cd, eocd]);
+    return Buffer.concat([...this.buffers, ...centralDirectory, eocd]);
   }
 }
 
-function addDir(zip, dir, prefix) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    const zipPath = prefix ? prefix + '/' + entry.name : entry.name;
-    if (entry.isDirectory()) {
-      addDir(zip, full, zipPath);
-    } else {
-      zip.addFile(zipPath, fs.readFileSync(full));
-    }
+function getShortSha() {
+  try {
+    return execSync('git rev-parse --short HEAD', { cwd: PROJECT_DIR, encoding: 'utf8' }).trim();
+  } catch {
+    return null;
   }
 }
 
-// Stamp buildinfo.json with git describe version and timestamp
-const { execSync } = require('child_process');
-const BUILDINFO_FILE = path.join(EXT_DIR, 'buildinfo.json');
-try {
-  // Produces e.g. "v1.2.0-3-g1461f1a" (tag + commits past tag + hash)
-  let version;
+function isDirtyWorktree() {
   try {
-    version = execSync('git describe --tags --always', { cwd: PROJECT_DIR, encoding: 'utf8' }).trim();
+    execSync('git diff --quiet && git diff --cached --quiet', { cwd: PROJECT_DIR, stdio: 'ignore' });
+    return false;
   } catch {
-    // No tags exist — fall back to short hash
-    version = execSync('git rev-parse --short HEAD', { cwd: PROJECT_DIR, encoding: 'utf8' }).trim();
+    return true;
   }
-  // Append +dirty if there are uncommitted changes
-  try {
-    execSync('git diff --quiet && git diff --cached --quiet', { cwd: PROJECT_DIR });
-  } catch {
+}
+
+function buildInfo() {
+  const shortSha = getShortSha();
+  let version = `v${packageJson.version}`;
+  if (shortSha) {
+    version += `-0-g${shortSha}`;
+  }
+  if (isDirtyWorktree()) {
     version += '+dirty';
   }
-  const buildInfo = JSON.stringify({ version, builtAt: new Date().toISOString() });
-  fs.writeFileSync(BUILDINFO_FILE, buildInfo);
-
-  // Update manifest.json version from git tag (Thunderbird requires numeric version)
-  const MANIFEST_FILE = path.join(EXT_DIR, 'manifest.json');
-  const manifest = JSON.parse(fs.readFileSync(MANIFEST_FILE, 'utf8'));
-  const tagMatch = version.match(/^v?(\d+\.\d+(?:\.\d+)?)/);
-  if (tagMatch) {
-    manifest.version = tagMatch[1];
-    fs.writeFileSync(MANIFEST_FILE, JSON.stringify(manifest, null, 2) + '\n');
-  }
-} catch {
-  console.warn('Warning: could not stamp buildinfo.json (git not available?)');
+  return {
+    version,
+    packageVersion: packageJson.version,
+    builtAt: new Date().toISOString(),
+  };
 }
 
+function walkExtensionFiles(dir, prefix = '') {
+  const entries = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      entries.push(...walkExtensionFiles(full, rel));
+    } else {
+      entries.push(rel);
+    }
+  }
+  return entries.sort();
+}
+
+const manifestForBuild = Buffer.from(
+  `${JSON.stringify({ ...manifestJson, version: packageJson.version }, null, 2)}\n`,
+  'utf8'
+);
+const buildInfoForBuild = Buffer.from(`${JSON.stringify(buildInfo())}\n`, 'utf8');
+
+const overrides = new Map([
+  ['manifest.json', manifestForBuild],
+  ['buildinfo.json', buildInfoForBuild],
+]);
+
 fs.mkdirSync(DIST_DIR, { recursive: true });
+fs.rmSync(OUT_FILE, { force: true });
+fs.rmSync(LEGACY_OUT_FILE, { force: true });
+
 const zip = new ZipWriter();
-addDir(zip, EXT_DIR, '');
+const seen = new Set();
+
+for (const rel of walkExtensionFiles(EXT_DIR)) {
+  if (overrides.has(rel)) {
+    zip.addFile(rel, overrides.get(rel));
+    seen.add(rel);
+  } else {
+    zip.addFile(rel, fs.readFileSync(path.join(EXT_DIR, rel)));
+  }
+}
+
+for (const [rel, data] of overrides.entries()) {
+  if (!seen.has(rel)) {
+    zip.addFile(rel, data);
+  }
+}
+
 fs.writeFileSync(OUT_FILE, zip.toBuffer());
-console.log(`Built: ${OUT_FILE} (${(fs.statSync(OUT_FILE).size / 1024).toFixed(0)} KB)`);
+const sizeKb = (fs.statSync(OUT_FILE).size / 1024).toFixed(0);
+process.stdout.write(`Built: ${OUT_FILE} (${sizeKb} KB)\n`);

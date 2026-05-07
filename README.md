@@ -1,183 +1,247 @@
 # Thunderbird Agent
 
-[![Tools](https://img.shields.io/badge/36_Tools-email%2C_compose%2C_filters%2C_calendar%2C_contacts-blue.svg)](#what-you-can-do)
-[![Localhost Only](https://img.shields.io/badge/Privacy-localhost_only-green.svg)](#security)
+[![Tools](https://img.shields.io/badge/36_Tools-email%2C_compose%2C_filters%2C_calendar%2C_contacts-blue.svg)](#tool-surface)
+[![Privacy](https://img.shields.io/badge/Privacy-localhost_only-green.svg)](#security-model)
 [![Thunderbird](https://img.shields.io/badge/Thunderbird-102%2B-0a84ff.svg)](https://www.thunderbird.net/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-grey.svg)](LICENSE)
 
-Give AI agents safe, scriptable access to Thunderbird — search mail, compose drafts, manage filters, and organize inboxes — without depending on MCP.
+Thunderbird Agent turns a local Thunderbird profile into a **CLI-first automation surface for AI agents**.
 
-This repo now ships in three layers:
+It lets Claude Code, Codex, OpenClaw, Hermes, and any other shell-capable agent safely work with:
 
-- **Thunderbird extension** — the real execution engine and permission boundary
-- **local CLI** — the primary integration surface for agents, scripts, and debugging
-- **vendor-neutral skill + instruction pack** — reusable guidance for Claude Code, Codex, OpenClaw, Hermes, and other terminal-capable agents
+- mail search and message retrieval
+- draft / reply / forward workflows
+- folder cleanup and tagging
+- filter CRUD and manual application
+- contacts, calendars, and tasks
 
-All three layers talk to the same localhost-only Thunderbird extension.
+The architecture is intentionally simple:
+
+1. **Thunderbird extension** — the execution engine and permission boundary
+2. **shared transport core** — connection discovery, auth, retry, JSON-RPC over localhost
+3. **local CLI** — the primary agent-facing interface
+4. **repo-local instructions + skill** — reusable guidance across agent runtimes
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Thunderbird Agent Demo" width="600">
+  <img src="https://raw.githubusercontent.com/buddhism5080/thunderbird-agent/main/docs/demo.gif" alt="Thunderbird Agent demo" width="720">
 </p>
 
-> Inspired by [bb1/thunderbird-mcp](https://github.com/bb1/thunderbird-mcp). The current upstream repo URL may still carry the legacy `thunderbird-mcp` path until the repository itself is renamed.
+> Inspired by [bb1/thunderbird-mcp](https://github.com/bb1/thunderbird-mcp), but intentionally rebuilt as a protocol-light, CLI-first agent package.
 
 ---
 
-## Why?
+## Why this project exists
 
-Thunderbird still has no official AI-first automation surface. This project fills that gap with a local, review-friendly tool layer so AI agents can help with real mailbox work: reading, drafting, sorting, filtering, contacts, and calendar actions.
+Thunderbird is a rich local mail client, but most AI tooling still assumes either browser automation or remote SaaS APIs.
+Thunderbird Agent closes that gap with a **localhost-only** integration layer that keeps mail inside Thunderbird while giving AI agents high-level tools to read, draft, organize, and inspect.
 
-Compose tools open a review window before sending by default. Set `skipReview` only when the user has already approved direct sending. **Nothing has to leave the outbox silently.**
+The default posture is conservative:
 
----
-
-## How it works
-
-```
-                              HTTP (localhost:8765-8774)
-  AGENTS.md / CLAUDE.md / skill  ────────────────────────┐
-  thunderbird-agent CLI          ────────────────────────┴──> Thunderbird extension + HTTP server
-```
-
-Internally, the repo is split into:
-
-- `packages/core/` — connection discovery, auth, retry, and HTTP transport
-- `packages/cli/` — reusable `thunderbird-agent` command-line interface
-- `skills/` + repo instruction files — vendor-neutral reusable guidance for different AI agents
-- `extension/` — Thunderbird-side execution engine and access control
-
-The extension writes a session-scoped connection file containing the live port and auth token. The shared transport discovers that file automatically, then the CLI and repo instruction surfaces reuse the same transport layer.
+- compose flows open review UI before send
+- account/tool access is user-configurable in the extension
+- auth tokens are session-scoped and stored in a local connection file
+- there is no remote listener and no cloud relay
 
 ---
 
-## What you can do
+## Quick start
 
-### Mail
-
-| Tool | Description |
-|------|-------------|
-| `listAccounts` | List all email accounts and their identities |
-| `listFolders` | Browse folder trees with message counts |
-| `searchMessages` | Search by sender, subject, recipients, tags, date range, or full-text body |
-| `getMessage` | Read full message content, including raw source or saved attachments |
-| `getRecentMessages` | Get recent mail with date/unread/tag filtering |
-| `displayMessage` | Open a message in Thunderbird |
-| `updateMessage` | Mark read, flag, tag, move, or trash messages |
-| `deleteMessages` | Delete messages safely |
-| `createFolder` / `renameFolder` / `moveFolder` / `deleteFolder` | Manage folders |
-| `emptyTrash` / `emptyJunk` | Permanently clean Trash or Junk |
-
-### Compose
-
-| Tool | Description |
-|------|-------------|
-| `sendMail` | Draft or send a new email |
-| `replyToMessage` | Reply with correct threading |
-| `forwardMessage` | Forward while preserving attachments |
-
-### Filters
-
-| Tool | Description |
-|------|-------------|
-| `listFilters` | Inspect filter rules |
-| `createFilter` | Create sorting rules |
-| `updateFilter` | Modify existing rules |
-| `deleteFilter` | Remove rules |
-| `reorderFilters` | Change priority |
-| `applyFilters` | Run filters on demand |
-
-### Contacts
-
-| Tool | Description |
-|------|-------------|
-| `searchContacts` | Search address books |
-| `createContact` | Add contacts |
-| `updateContact` | Edit contacts |
-| `deleteContact` | Remove contacts |
-
-### Calendar
-
-| Tool | Description |
-|------|-------------|
-| `listCalendars` | List calendars |
-| `createEvent` / `updateEvent` / `deleteEvent` | Manage calendar events |
-| `listEvents` | Query events across date ranges |
-| `createTask` / `listTasks` / `updateTask` | Manage Thunderbird tasks |
-
-### Access Control
-
-| Tool | Description |
-|------|-------------|
-| `getAccountAccess` | View which accounts external agent calls can access |
-
-Access control is configured by the user in the extension settings page. Agents can read it but not widen it.
-
----
-
-## Setup
-
-### 1. Clone the repo
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/buddhism5080/thunderbird-agent.git
 cd thunderbird-agent
 ```
 
-### 2. Install the extension
-
-Install `dist/thunderbird-agent.xpi` in Thunderbird (Tools > Add-ons > Install from File), then restart Thunderbird.
-
-### 3. Use the CLI
+### 2. Build the extension artifact
 
 ```bash
-# Health / discovery check
+npm run build
+```
+
+This produces:
+
+- `dist/thunderbird-agent.xpi`
+- a refreshed `shared/tool-catalog.json`
+
+### 3. Install the extension in Thunderbird
+
+In Thunderbird:
+
+- **Tools → Add-ons and Themes**
+- click the gear menu
+- **Install Add-on From File...**
+- choose `dist/thunderbird-agent.xpi`
+- restart Thunderbird
+
+Or from the repository root on a local workstation:
+
+```bash
+./scripts/install.sh
+```
+
+### 4. Verify the CLI can see Thunderbird
+
+```bash
 node packages/cli/thunderbird-agent.cjs doctor
+```
 
-# List live tools from a running Thunderbird session
+### 5. Call tools directly
+
+```bash
 node packages/cli/thunderbird-agent.cjs tools list
-
-# Inspect the offline catalog without Thunderbird running
-node packages/cli/thunderbird-agent.cjs tools list --catalog
-
-# Call one tool directly
 node packages/cli/thunderbird-agent.cjs tools call searchMessages --args '{"query":"invoice","maxResults":10}'
 ```
 
-After `npm install -g` or `npm link`, the same commands work as:
+If installed globally:
 
 ```bash
 thunderbird-agent doctor
 thunderbird-agent tools list
 ```
 
-### 4. Give agents repo-local instructions
+---
 
-This repo intentionally uses **CLI + instruction files + skill** instead of a vendor-specific agent protocol layer.
+## Tool surface
 
-Use these surfaces:
+Thunderbird Agent currently exports **36 tools** across six categories.
 
-- `AGENTS.md` — broad project instructions for agent runtimes that honor AGENTS-style files
-- `CLAUDE.md` — Claude Code specific companion instructions
-- `skills/thunderbird-agent/SKILL.md` — vendor-neutral reusable Thunderbird workflow skill
-- `docs/agents/` — short CLI-first notes for Claude Code, Codex, and OpenClaw
+### Mail
 
-Recommended usage:
+- `listAccounts`
+- `listFolders`
+- `searchMessages`
+- `getMessage`
+- `getRecentMessages`
+- `displayMessage`
+- `updateMessage`
+- `deleteMessages`
+- `createFolder`
+- `renameFolder`
+- `moveFolder`
+- `deleteFolder`
+- `emptyTrash`
+- `emptyJunk`
 
-1. give the agent this repo as working context so it can read `AGENTS.md` / `CLAUDE.md`
-2. let the agent call the local CLI directly
-3. load or reference `skills/thunderbird-agent/SKILL.md` for repeatable workflows
+### Compose
 
-### Sandbox-aware connection discovery
+- `sendMail`
+- `replyToMessage`
+- `forwardMessage`
 
-The shared transport re-discovers `connection.json` on every cache miss. It tries these locations in order:
+### Filters
 
-1. `THUNDERBIRD_AGENT_CONNECTION_FILE`, if set
-2. Native temp dir: `<os.tmpdir()>/thunderbird-agent/connection.json`
-3. macOS fallback: `/var/folders/*/*/T/thunderbird-agent/connection.json` owned by the current user
-4. Linux Snap: Thunderbird's live `TMPDIR` from `/proc/<pid>/environ`, plus the official snap fallback under `~/Downloads/thunderbird.tmp`
-5. Linux Flatpak / Betterbird Flatpak: `$XDG_RUNTIME_DIR/app/*/thunderbird-agent/connection.json`
+- `listFilters`
+- `createFilter`
+- `updateFilter`
+- `deleteFilter`
+- `reorderFilters`
+- `applyFilters`
 
-Example override:
+### Contacts
+
+- `searchContacts`
+- `createContact`
+- `updateContact`
+- `deleteContact`
+
+### Calendar and tasks
+
+- `listCalendars`
+- `createEvent`
+- `listEvents`
+- `updateEvent`
+- `deleteEvent`
+- `createTask`
+- `listTasks`
+- `updateTask`
+
+### Access control visibility
+
+- `getAccountAccess`
+
+For the authoritative machine-readable catalog, use:
+
+```bash
+node packages/cli/thunderbird-agent.cjs tools list --catalog
+```
+
+---
+
+## CLI reference
+
+```bash
+thunderbird-agent doctor
+thunderbird-agent tools list
+thunderbird-agent tools list --catalog
+thunderbird-agent tools call searchMessages --args '{"query":"from:alice report","maxResults":5}'
+thunderbird-agent rpc --request '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+Commands:
+
+- `doctor` — validate connection discovery and live access
+- `tools list` — enumerate live tools from a running Thunderbird session
+- `tools list --catalog` — inspect the offline exported catalog
+- `tools call <name> --args <json>` — invoke one tool and print JSON output
+- `catalog [show <name>]` — inspect the shared tool catalog
+- `rpc --request <json>` — send raw JSON-RPC to the localhost transport for debugging
+
+---
+
+## Agent integration surfaces
+
+This repository intentionally optimizes for **repo-aware, terminal-capable agents**, not for a shared runtime protocol.
+
+Primary surfaces:
+
+- `AGENTS.md` — repo-level instructions for broad agent runtimes
+- `CLAUDE.md` — Claude Code specific companion guidance
+- `skills/thunderbird-agent/SKILL.md` — reusable Thunderbird workflow skill
+- `docs/agents/` — concise integration notes for Claude Code, Codex, and OpenClaw
+
+Start here:
+
+- `docs/README.md`
+- `docs/agents/README.md`
+
+---
+
+## Build and packaging
+
+### Canonical build commands
+
+```bash
+npm run check:versions
+npm run build:catalog
+npm run build:xpi
+npm run build
+npm run pack:check
+```
+
+What they do:
+
+- `check:versions` — enforce that `package.json` and `extension/manifest.json` use the same release version
+- `build:catalog` — re-export `shared/tool-catalog.json`
+- `build:xpi` — produce `dist/thunderbird-agent.xpi` **without mutating the source tree**
+- `build` — run the full local release pipeline
+- `pack:check` — preview npm package contents and size
+
+The npm package intentionally ships the CLI, extension source, exported tool catalog, skill/docs surfaces, and the built XPI artifact — but excludes large repo-only assets like the local demo GIF from the tarball.
+
+---
+
+## Connection discovery
+
+The shared transport re-discovers `connection.json` on cache misses. Search order:
+
+1. `THUNDERBIRD_AGENT_CONNECTION_FILE`
+2. native temp dir: `<os.tmpdir()>/thunderbird-agent/connection.json`
+3. macOS temp fallback under `/var/folders/*/*/T/thunderbird-agent/connection.json`
+4. Thunderbird Snap `TMPDIR` plus the official snap fallback path
+5. Flatpak / Betterbird runtime paths under `$XDG_RUNTIME_DIR/app/*/thunderbird-agent/connection.json`
+
+Useful overrides:
 
 ```bash
 export THUNDERBIRD_AGENT_CONNECTION_FILE=/absolute/path/to/connection.json
@@ -186,58 +250,73 @@ export THUNDERBIRD_AGENT_CLI=/absolute/path/to/thunderbird-agent/packages/cli/th
 
 ---
 
-## Security
+## Security model
 
-- **Auth tokens**: The HTTP server requires a session-scoped bearer token and writes it to a local connection file with 0600 permissions.
-- **Dynamic port**: The extension chooses an available localhost port in the configured range and records it in the connection file.
-- **Account access control**: Restrict which Thunderbird accounts external agent calls can see.
-- **Tool access control**: Disable risky or unwanted tools from the options page.
-- **Localhost only**: No remote access.
+- **localhost only** — no remote listener
+- **session-scoped bearer token** — written to a local connection file with restrictive permissions
+- **review-first compose flows** — mail can open in Thunderbird before send
+- **user-controlled account access** — mailbox visibility is configurable in extension settings
+- **user-controlled tool access** — individual tools can be disabled in extension settings
+
+If you are using an AI agent to send or modify mail, keep `skipReview: false` unless the user explicitly asked for silent send behavior.
 
 ---
 
 ## Troubleshooting
 
-| Problem | Fix |
-|---------|-----|
-| Extension not loading | Check Tools > Add-ons and Themes; inspect the Thunderbird Error Console |
-| Connection refused | Make sure Thunderbird is running and the extension is enabled |
-| CLI can't find `connection.json` | Set `THUNDERBIRD_AGENT_CONNECTION_FILE` explicitly |
-| Missing recent emails | IMAP folders may be stale; click the folder in Thunderbird or repair it |
+| Problem | What to check |
+|---|---|
+| `doctor` says connection file not found | Thunderbird is running; extension is enabled; connection override path is correct |
+| CLI can list catalog but not live tools | Thunderbird is not running yet, or the extension failed to start |
+| Compose actions fail with `skipReview` | The user may have enabled the extension-side safety block |
+| IMAP state looks stale | Open the folder in Thunderbird or repair/sync it before retrying |
+| Build output missing | Run `npm run build` and confirm `dist/thunderbird-agent.xpi` exists |
 
 ---
 
-## Development
+## Documentation map
+
+- `docs/README.md` — documentation overview
+- `docs/agents/README.md` — agent integration overview
+- `docs/agents/claude-code.md` — Claude Code workflow notes
+- `docs/agents/codex.md` — Codex workflow notes
+- `docs/agents/openclaw.md` — OpenClaw workflow notes
+- `docs/filter-api-research.md` — archived filter implementation notes
+
+---
+
+## Development checklist
 
 ```bash
 npm test
-node packages/cli/thunderbird-agent.cjs doctor
-node packages/cli/thunderbird-agent.cjs tools list --catalog
+npm run build
+npm run pack:check
 ```
 
-For raw debugging, you can also send a JSON-RPC payload through the CLI transport:
-
-```bash
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | node packages/cli/thunderbird-agent.cjs rpc
-```
+If you change tool metadata in `extension/agent_server/api.js`, always refresh `shared/tool-catalog.json` before committing.
 
 ---
 
-## Repo layout
+## Repository layout
 
 ```text
 thunderbird-agent/
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── README.md
+├── dist/
+│   └── thunderbird-agent.xpi
 ├── docs/
-│   └── agents/
+│   ├── README.md
+│   ├── agents/
+│   └── filter-api-research.md
 ├── extension/
-│   └── agent_server/
+│   ├── agent_server/
+│   ├── manifest.json
+│   └── options.*
 ├── packages/
-│   ├── core/
-│   └── cli/
-│       └── thunderbird-agent.cjs
+│   ├── cli/
+│   └── core/
 ├── scripts/
 ├── shared/
 ├── skills/
