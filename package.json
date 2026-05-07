@@ -1,0 +1,49 @@
+{
+  "name": "thunderbird-agent",
+  "version": "0.2.0",
+  "description": "Thunderbird extension, CLI, and vendor-neutral skill pack for AI agents to automate mail, contacts, filters, and calendars",
+  "author": "Tomasz Kasperczyk",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/buddhism5080/thunderbird-agent"
+  },
+  "homepage": "https://github.com/buddhism5080/thunderbird-agent",
+  "bugs": {
+    "url": "https://github.com/buddhism5080/thunderbird-agent/issues"
+  },
+  "keywords": [
+    "thunderbird",
+    "email",
+    "ai",
+    "agents",
+    "claude",
+    "codex",
+    "openclaw",
+    "cli",
+    "skills"
+  ],
+  "bin": {
+    "thunderbird-agent": "./packages/cli/thunderbird-agent.cjs"
+  },
+  "files": [
+    "packages/",
+    "shared/",
+    "skills/",
+    "docs/",
+    "extension/",
+    "scripts/",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "catalog:export": "node ./scripts/export-tool-catalog.cjs",
+    "doctor": "node ./packages/cli/thunderbird-agent.cjs doctor"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

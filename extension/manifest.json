@@ -1,0 +1,54 @@
+{
+  "manifest_version": 2,
+  "name": "Thunderbird Agent",
+  "version": "0.5.0",
+  "description": "Local Thunderbird agent server for mail, contacts, filters, and calendar automation",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "thunderbird-agent@tkasperczyk.dev",
+      "strict_min_version": "102.0",
+      "strict_max_version": "150.*"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "64": "icons/icon-64.png",
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "experiment_apis": {
+    "agentServer": {
+      "schema": "agent_server/schema.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
+        ],
+        "paths": [
+          [
+            "agentServer"
+          ]
+        ],
+        "script": "agent_server/api.js"
+      }
+    }
+  },
+  "options_ui": {
+    "page": "options.html"
+  },
+  "permissions": [
+    "accountsRead",
+    "addressBooks",
+    "messagesRead",
+    "messagesMove",
+    "accountsFolders",
+    "compose"
+  ],
+  "web_accessible_resources": []
+}
