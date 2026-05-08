@@ -1,24 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Thunderbird Agent icon">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1a73e8"/>
-      <stop offset="100%" style="stop-color:#0d47a1"/>
+    <linearGradient id="bg" x1="12" y1="8" x2="116" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0f3f97"/>
+      <stop offset="55%" stop-color="#155fcb"/>
+      <stop offset="100%" stop-color="#21b8ff"/>
     </linearGradient>
-    <linearGradient id="envelope" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#ffffff"/>
-      <stop offset="100%" style="stop-color:#e8eaed"/>
+    <linearGradient id="mail" x1="22" y1="28" x2="104" y2="98" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e8f3ff"/>
+    </linearGradient>
+    <linearGradient id="flap" x1="24" y1="38" x2="104" y2="66" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#dcecff"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="52" y1="68" x2="79" y2="98" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#18d8ff"/>
+      <stop offset="100%" stop-color="#2d63ff"/>
     </linearGradient>
   </defs>
 
-  <!-- Rounded square background -->
-  <rect x="4" y="4" width="120" height="120" rx="24" ry="24" fill="url(#bg)"/>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#bg)"/>
+  <circle cx="36" cy="30" r="26" fill="#ffffff" opacity="0.10"/>
 
-  <!-- Envelope body - centered and large -->
-  <rect x="14" y="26" width="100" height="76" rx="5" ry="5" fill="url(#envelope)" opacity="0.95"/>
+  <rect x="18" y="30" width="92" height="72" rx="18" fill="#08275f" opacity="0.16"/>
+  <rect x="18" y="26" width="92" height="72" rx="18" fill="url(#mail)" stroke="#cfe2ff" stroke-width="1.5"/>
 
-  <!-- Envelope flap -->
-  <path d="M14 26 L64 58 L114 26" fill="none" stroke="#1a73e8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M22 38 L64 66 L106 38" fill="url(#flap)" stroke="#1a53b3" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M22 86 L52 64" fill="none" stroke="#d6e8ff" stroke-width="4" stroke-linecap="round"/>
+  <path d="M106 86 L76 64" fill="none" stroke="#d6e8ff" stroke-width="4" stroke-linecap="round"/>
 
-  <!-- AI text - large, bold, centered on envelope below flap -->
-  <text x="64" y="92" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="45" fill="#1a1a1a">AI</text>
+  <path d="M67.5 69.5 H79.5 L69.5 82.5 H78.5 L56.5 98.5 L62.5 85.5 H52.5 L67.5 69.5 Z" fill="#0b367e" opacity="0.16"/>
+  <path d="M66 68 H78 L68 81 H77 L56 98 L62 84 H52 L66 68 Z" fill="url(#bolt)"/>
 </svg>
